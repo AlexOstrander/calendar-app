@@ -18,9 +18,12 @@ const CalendarSync = () => {
     const fetchSyncStatus = async () => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/calendar-sync/status`);
+            console.log('Sync Status Response:', response);
+            console.log('Sync Status Data:', response.data);
             setSyncStatus(response.data);
         } catch (error) {
             console.error('Error fetching sync status:', error);
+            console.error('Error details:', error.response?.data);
         }
     };
 

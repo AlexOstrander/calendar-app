@@ -9,26 +9,52 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const Calendar = () => {
     const [events, setEvents] = useState([]);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log('Calendar component mounted');
+        console.log('API_BASE_URL:', API_BASE_URL);
         fetchEvents();
     }, []);
 
     const fetchEvents = async () => {
         try {
+            setLoading(true);
+            setError(null);
+            console.log('Fetching events from:', `${API_BASE_URL}/api/events`);
             const response = await axios.get(`${API_BASE_URL}/api/events`);
-            const formattedEvents = response.data.map(event => ({
-                id: event.id,
-                title: event.title,
-                start: event.start_time,
-                end: event.end_time,
-                description: event.description,
-                color: event.color,
-                allDay: event.all_day
-            }));
+            console.log('Raw API response:', response);
+            
+            if (!response.data) {
+                throw new Error('No data received from API');
+            }
+
+            const formattedEvents = response.data.map(event => {
+                console.log('Processing event:', event);
+                return {
+                    id: event.id,
+                    title: event.title,
+                    start: event.start_time,
+                    end: event.end_time,
+                    description: event.description,
+                    color: event.color,
+                    allDay: event.all_day
+                };
+            });
+            
+            console.log('Formatted events:', formattedEvents);
             setEvents(formattedEvents);
         } catch (error) {
             console.error('Error fetching events:', error);
+            console.error('Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+            setError(error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -74,6 +100,14 @@ const Calendar = () => {
             console.error('Error deleting event:', error);
         }
     };
+
+    if (loading) {
+        return <div>Loading calendar...</div>;
+    }
+
+    if (error) {
+        return <div>Error loading calendar: {error}</div>;
+    }
 
     return (
         <div className="calendar-container" style={{ height: '800px', padding: '20px' }}>
