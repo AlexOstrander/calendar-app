@@ -24,7 +24,7 @@ class GoogleCalendarService
 
     public function getAuthUrl()
     {
-        $this->client->setRedirectUri('http://localhost:8000/api/calendar-sync/google/callback');
+        $this->client->setRedirectUri(env('GOOGLE_REDIRECT_URI'));
         return $this->client->createAuthUrl();
     }
 

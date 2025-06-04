@@ -5,6 +5,8 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const Calendar = () => {
     const [events, setEvents] = useState([]);
 
@@ -14,7 +16,7 @@ const Calendar = () => {
 
     const fetchEvents = async () => {
         try {
-            const response = await axios.get('http://localhost:8000/api/events');
+            const response = await axios.get(`${API_BASE_URL}/api/events`);
             const formattedEvents = response.data.map(event => ({
                 id: event.id,
                 title: event.title,
@@ -40,7 +42,7 @@ const Calendar = () => {
                 color: info.event.backgroundColor
             };
 
-            await axios.post('http://localhost:8000/api/events', newEvent);
+            await axios.post(`${API_BASE_URL}/api/events`, newEvent);
             fetchEvents();
         } catch (error) {
             console.error('Error adding event:', error);
@@ -57,7 +59,7 @@ const Calendar = () => {
                 color: info.event.backgroundColor
             };
 
-            await axios.put(`http://localhost:8000/api/events/${info.event.id}`, updatedEvent);
+            await axios.put(`${API_BASE_URL}/api/events/${info.event.id}`, updatedEvent);
             fetchEvents();
         } catch (error) {
             console.error('Error updating event:', error);
@@ -66,7 +68,7 @@ const Calendar = () => {
 
     const handleEventDelete = async (info) => {
         try {
-            await axios.delete(`http://localhost:8000/api/events/${info.event.id}`);
+            await axios.delete(`${API_BASE_URL}/api/events/${info.event.id}`);
             fetchEvents();
         } catch (error) {
             console.error('Error deleting event:', error);

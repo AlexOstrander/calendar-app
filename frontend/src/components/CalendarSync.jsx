@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const CalendarSync = () => {
     const [syncStatus, setSyncStatus] = useState({
         google: { connected: false, last_sync: null },
@@ -15,7 +17,7 @@ const CalendarSync = () => {
 
     const fetchSyncStatus = async () => {
         try {
-            const response = await axios.get('http://localhost:8000/api/calendar-sync/status');
+            const response = await axios.get(`${API_BASE_URL}/api/calendar-sync/status`);
             setSyncStatus(response.data);
         } catch (error) {
             console.error('Error fetching sync status:', error);
@@ -26,7 +28,7 @@ const CalendarSync = () => {
         try {
             setLoading(true);
             setError("");
-            const response = await axios.get('http://localhost:8000/api/calendar-sync/google/auth-url');
+            const response = await axios.get(`${API_BASE_URL}/api/calendar-sync/google/auth-url`);
             window.location.href = response.data.url;
         } catch (error) {
             setError('Failed to connect to Google Calendar. Please try again.');
@@ -40,7 +42,7 @@ const CalendarSync = () => {
         try {
             setLoading(true);
             setError("");
-            await axios.post('http://localhost:8000/api/calendar-sync/google/sync');
+            await axios.post(`${API_BASE_URL}/api/calendar-sync/google/sync`);
             await fetchSyncStatus();
         } catch (error) {
             setError('Failed to sync with Google Calendar. Please try again.');
@@ -53,7 +55,7 @@ const CalendarSync = () => {
     const handleAppleExport = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:8000/api/calendar-sync/apple/ical-url');
+            const response = await axios.get(`${API_BASE_URL}/api/calendar-sync/apple/ical-url`);
             
             // Create a blob and download the iCal file
             const blob = new Blob([response.data.ical_content], { type: 'text/calendar' });
