@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\CalendarSyncController;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,9 +21,24 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::apiResource('events', EventController::class);
+// Protect all event routes with auth:sanctum
+Route::middleware('auth:sanctum')->apiResource('events', EventController::class);
 
-// Calendar Sync Routes
+// Token login route for API authentication
+Route::post('/token-login', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+    if (!Auth::attempt($credentials)) {
+        return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+    $user = Auth::user();
+    $token = $user->createToken('api-token')->plainTextToken;
+    return response()->json(['token' => $token, 'user' => $user]);
+});
+
+// Calendar Sync Routes (protect as needed)
 Route::prefix('calendar-sync')->group(function () {
     Route::get('google/auth-url', [CalendarSyncController::class, 'getGoogleAuthUrl']);
     Route::get('google/callback', [CalendarSyncController::class, 'handleGoogleCallback']);
