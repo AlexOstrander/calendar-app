@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-const CalendarSync = () => {
+const CalendarSync = ({ refreshEvents }) => {
     const [syncStatus, setSyncStatus] = useState({
         google: { connected: false, last_sync: null },
         apple: { connected: false, last_sync: null }
@@ -13,6 +13,14 @@ const CalendarSync = () => {
 
     useEffect(() => {
         fetchSyncStatus();
+        // Check for error in URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorParam = urlParams.get('error');
+        if (errorParam) {
+            setError(decodeURIComponent(errorParam));
+            // Remove the error parameter from the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }, []);
 
     const fetchSyncStatus = async () => {
@@ -47,6 +55,9 @@ const CalendarSync = () => {
             setError("");
             await axios.post(`${API_BASE_URL}/api/calendar-sync/google/sync`);
             await fetchSyncStatus();
+            if (refreshEvents) {
+                await refreshEvents();
+            }
         } catch (error) {
             setError('Failed to sync with Google Calendar. Please try again.');
             console.error('Error syncing with Google Calendar:', error);
