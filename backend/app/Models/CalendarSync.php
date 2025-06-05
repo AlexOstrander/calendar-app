@@ -14,7 +14,8 @@ class CalendarSync extends Model
         'expires_at',
         'calendar_id',
         'is_active',
-        'sync_settings'
+        'sync_settings',
+        'user_id',
     ];
 
     protected $casts = [

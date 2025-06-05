@@ -15,10 +15,7 @@ const EventModal = ({ open, onClose, onSave, initialEvent }) => {
   useEffect(() => {
     function toLocalDatetimeString(dateStr) {
       if (!dateStr) return '';
-      const date = new Date(dateStr);
-      const offset = date.getTimezoneOffset();
-      const localDate = new Date(date.getTime() - offset * 60000);
-      return localDate.toISOString().slice(0, 16);
+      return dateStr.slice(0, 16);
     }
     if (initialEvent) {
       setEvent({

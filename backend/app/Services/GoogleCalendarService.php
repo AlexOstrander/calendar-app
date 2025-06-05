@@ -20,11 +20,13 @@ class GoogleCalendarService
         $this->client->addScope(Google_Service_Calendar::CALENDAR);
         $this->client->setAccessType('offline');
         $this->client->setPrompt('consent');
+        $this->client->setRedirectUri(config('services.google.redirect'));
     }
 
     public function getAuthUrl()
     {
-        $this->client->setRedirectUri(env('GOOGLE_REDIRECT_URI'));
+        \Log::info('GOOGLE_REDIRECT_URI: ' . config('services.google.redirect'));
+        $this->client->setRedirectUri(config('services.google.redirect'));
         return $this->client->createAuthUrl();
     }
 
@@ -46,7 +48,8 @@ class GoogleCalendarService
             'refresh_token' => $token['refresh_token'] ?? null,
             'token_type' => $token['token_type'],
             'expires_at' => Carbon::now()->addSeconds($token['expires_in']),
-            'calendar_id' => 'primary'
+            'calendar_id' => 'primary',
+            'user_id' => \Auth::id(),
         ]);
     }
 
@@ -65,7 +68,9 @@ class GoogleCalendarService
             'timeMax' => Carbon::now()->addDays(90)->toRfc3339String(),
         ]);
 
+        $googleEventIds = [];
         foreach ($googleEvents->getItems() as $googleEvent) {
+            $googleEventIds[] = $googleEvent->getId();
             Event::updateOrCreate(
                 ['google_event_id' => $googleEvent->getId()],
                 [
@@ -74,12 +79,20 @@ class GoogleCalendarService
                     'start_time' => Carbon::parse($googleEvent->getStart()->getDateTime()),
                     'end_time' => Carbon::parse($googleEvent->getEnd()->getDateTime()),
                     'all_day' => $googleEvent->getStart()->getDateTime() === null,
+                    'user_id' => $sync->user_id,
                 ]
             );
         }
 
-        // Sync local events to Google Calendar
+        // Delete local events that have a google_event_id but are no longer in Google
+        Event::where('user_id', $sync->user_id)
+            ->whereNotNull('google_event_id')
+            ->whereNotIn('google_event_id', $googleEventIds)
+            ->delete();
+
+        // Sync local events to Google Calendar (local-only events)
         $localEvents = Event::whereNull('google_event_id')
+            ->where('user_id', $sync->user_id)
             ->where('start_time', '>=', Carbon::now()->subDays(30))
             ->where('end_time', '<=', Carbon::now()->addDays(90))
             ->get();

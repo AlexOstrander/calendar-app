@@ -7,6 +7,7 @@ use App\Services\GoogleCalendarService;
 use App\Services\AppleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 
 class CalendarSyncController extends Controller
 {
@@ -28,10 +29,11 @@ class CalendarSyncController extends Controller
         ]);
     }
 
-    public function handleGoogleCallback(Request $request): JsonResponse
+    public function handleGoogleCallback(Request $request): RedirectResponse
     {
         $sync = $this->googleService->handleCallback($request->code);
-        return response()->json($sync);
+        // Redirect to your frontend calendar app
+        return redirect(config('app.frontend_url', 'https://calendar.alex-o.dev') . '?google=success');
     }
 
     public function getICalUrl(): JsonResponse
@@ -72,5 +74,11 @@ class CalendarSyncController extends Controller
                 'last_sync' => $appleSync ? $appleSync->updated_at : null,
             ]
         ]);
+    }
+
+    public function disconnectGoogle(): JsonResponse
+    {
+        CalendarSync::where('provider', 'google')->delete();
+        return response()->json(['message' => 'Google Calendar disconnected successfully']);
     }
 } 

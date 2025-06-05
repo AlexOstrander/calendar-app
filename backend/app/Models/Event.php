@@ -14,7 +14,8 @@ class Event extends Model
         'color',
         'all_day',
         'google_event_id',
-        'ical_event_id'
+        'ical_event_id',
+        'user_id',
     ];
 
     protected $casts = [

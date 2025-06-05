@@ -16,8 +16,12 @@ const Calendar = ({
     onGoogleConnect,
     onGoogleSync,
     onGoogleLogout,
-    onAppleExport
+    onAppleExport,
+    userName
 }) => {
+    // Debug log for userName prop
+    console.log('Calendar received userName:', userName);
+
     const [localSyncing, setLocalSyncing] = React.useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalEvent, setModalEvent] = useState(null);
@@ -26,9 +30,24 @@ const Calendar = ({
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const openAddModal = (dateInfo) => {
+        let start, end;
+        const now = new Date();
+        if (dateInfo.allDay) {
+            // Use the clicked day, but set the time to now
+            const clickedDate = new Date(dateInfo.startStr);
+            clickedDate.setHours(now.getHours(), now.getMinutes(), 0, 0);
+            start = clickedDate.toISOString().slice(0, 16);
+            // Set end to one hour after start
+            const endDate = new Date(clickedDate);
+            endDate.setHours(endDate.getHours() + 1);
+            end = endDate.toISOString().slice(0, 16);
+        } else {
+            start = dateInfo.startStr.slice(0, 16);
+            end = dateInfo.endStr ? dateInfo.endStr.slice(0, 16) : dateInfo.startStr.slice(0, 16);
+        }
         setModalEvent({
-            start: dateInfo.startStr.slice(0, 16),
-            end: dateInfo.endStr ? dateInfo.endStr.slice(0, 16) : dateInfo.startStr.slice(0, 16),
+            start,
+            end,
             allDay: dateInfo.allDay || false,
             color: '#4a90e2',
         });
@@ -93,18 +112,74 @@ const Calendar = ({
     };
 
     const handleEventDelete = async (clickInfo) => {
-        if (!window.confirm('Delete this event?')) return;
+        if (!window.confirm('Delete this event?')) {
+            console.log('User cancelled delete');
+            return;
+        }
         setLocalSyncing(true);
+        const token = localStorage.getItem('token');
         try {
-            await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/events/${clickInfo.event.id}`, {
-                method: 'DELETE'
+            console.log('Sending DELETE request...');
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/events/${clickInfo.event.id}`, {
+                method: 'DELETE',
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
             });
+            console.log('DELETE response status:', response.status);
             await refreshEvents();
         } catch (error) {
-            // Optionally handle error
+            console.error('Error deleting event:', error);
         } finally {
             setLocalSyncing(false);
         }
+    };
+
+    const renderEventContent = (eventInfo) => {
+        // Determine if this is month view and a timed event
+        const isMonthView = eventInfo.view && eventInfo.view.type === 'dayGridMonth';
+        const isTimed = !eventInfo.event.allDay;
+        const color = eventInfo.event.backgroundColor || eventInfo.event.extendedProps.color || '#4a90e2';
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderLeft: `5px solid ${color}`,
+                paddingLeft: 4,
+                background: isMonthView ? 'rgba(0,0,0,0.01)' : undefined,
+                minHeight: 20
+            }}>
+                <span>
+                    {isMonthView && isTimed && eventInfo.timeText && (
+                        <span style={{ fontWeight: 600, marginRight: 4 }}>{eventInfo.timeText}</span>
+                    )}
+                    {eventInfo.event.title}
+                </span>
+                <button
+                    type="button"
+                    style={{
+                        color: '#f44336',
+                        marginLeft: 8,
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: 16,
+                        padding: '0 4px',
+                        borderRadius: 4,
+                        background: 'rgba(244,67,54,0.08)',
+                        border: 'none'
+                    }}
+                    title="Delete event"
+                    onClick={e => {
+                        e.stopPropagation();
+                        console.log('Delete X clicked', eventInfo.event.id);
+                        handleEventDelete(eventInfo);
+                    }}
+                >
+                    ×
+                </button>
+            </div>
+        );
     };
 
     if (loading) {
@@ -129,7 +204,7 @@ const Calendar = ({
                     marginBottom: 24,
                     color: '#22223B',
                 }}>
-                    My Calendar
+                    {userName ? `${userName}'s Calendar` : 'Loading...'}
                 </h2>
                 {/* Toolbar for sync controls */}
                 <div style={{
@@ -230,6 +305,7 @@ const Calendar = ({
                         setCurrentView(arg.view.type);
                         setCurrentDate(arg.start);
                     }}
+                    eventContent={renderEventContent}
                 />
                 <EventModal
                     open={modalOpen}

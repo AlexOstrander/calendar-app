@@ -43,7 +43,15 @@ class EventController extends Controller
         ]);
         $validated['user_id'] = Auth::id();
         $event = Event::create($validated);
-        return response()->json($event, 201);
+        $eventArray = $event->toArray();
+        if ($event->all_day) {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d');
+        } else {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d\TH:i:s');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d\TH:i:s');
+        }
+        return response()->json($eventArray, 201);
     }
 
     /**
@@ -54,7 +62,15 @@ class EventController extends Controller
         if ($event->user_id !== Auth::id()) {
             abort(403);
         }
-        return response()->json($event);
+        $eventArray = $event->toArray();
+        if ($event->all_day) {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d');
+        } else {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d\TH:i:s');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d\TH:i:s');
+        }
+        return response()->json($eventArray);
     }
 
     /**
@@ -74,7 +90,15 @@ class EventController extends Controller
             'all_day' => 'boolean'
         ]);
         $event->update($validated);
-        return response()->json($event);
+        $eventArray = $event->toArray();
+        if ($event->all_day) {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d');
+        } else {
+            $eventArray['start_time'] = \Carbon\Carbon::parse($event->start_time)->format('Y-m-d\TH:i:s');
+            $eventArray['end_time'] = \Carbon\Carbon::parse($event->end_time)->format('Y-m-d\TH:i:s');
+        }
+        return response()->json($eventArray);
     }
 
     /**
