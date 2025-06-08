@@ -25,9 +25,14 @@ const Calendar = ({
     const [localSyncing, setLocalSyncing] = React.useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalEvent, setModalEvent] = useState(null);
-    const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+    const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit' or 'view'
     const [currentView, setCurrentView] = useState('dayGridMonth');
     const [currentDate, setCurrentDate] = useState(new Date());
+
+    const toLocalInputValue = (date) => {
+        const pad = n => n.toString().padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
 
     const openAddModal = (dateInfo) => {
         let start, end;
@@ -36,11 +41,11 @@ const Calendar = ({
             // Use the clicked day, but set the time to now
             const clickedDate = new Date(dateInfo.startStr);
             clickedDate.setHours(now.getHours(), now.getMinutes(), 0, 0);
-            start = clickedDate.toISOString().slice(0, 16);
+            start = toLocalInputValue(clickedDate);
             // Set end to one hour after start
             const endDate = new Date(clickedDate);
             endDate.setHours(endDate.getHours() + 1);
-            end = endDate.toISOString().slice(0, 16);
+            end = toLocalInputValue(endDate);
         } else {
             start = dateInfo.startStr.slice(0, 16);
             end = dateInfo.endStr ? dateInfo.endStr.slice(0, 16) : dateInfo.startStr.slice(0, 16);
@@ -156,28 +161,6 @@ const Calendar = ({
                     )}
                     {eventInfo.event.title}
                 </span>
-                <button
-                    type="button"
-                    style={{
-                        color: '#f44336',
-                        marginLeft: 8,
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: 16,
-                        padding: '0 4px',
-                        borderRadius: 4,
-                        background: 'rgba(244,67,54,0.08)',
-                        border: 'none'
-                    }}
-                    title="Delete event"
-                    onClick={e => {
-                        e.stopPropagation();
-                        console.log('Delete X clicked', eventInfo.event.id);
-                        handleEventDelete(eventInfo);
-                    }}
-                >
-                    ×
-                </button>
             </div>
         );
     };
@@ -312,6 +295,31 @@ const Calendar = ({
                     onClose={() => setModalOpen(false)}
                     onSave={handleModalSave}
                     initialEvent={modalEvent}
+                    onDelete={async (eventObj) => {
+                        console.log('Attempting to delete event:', eventObj);
+                        setLocalSyncing(true);
+                        const token = localStorage.getItem('token');
+                        try {
+                            console.log('About to send DELETE request...');
+                            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/events/${eventObj.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                                }
+                            });
+                            console.log('DELETE response status:', response.status);
+                            if (!response.ok) {
+                                const text = await response.text();
+                                console.error('Delete failed:', response.status, text);
+                            }
+                            setModalOpen(false);
+                            await refreshEvents();
+                        } catch (error) {
+                            console.error('Error deleting event:', error);
+                        } finally {
+                            setLocalSyncing(false);
+                        }
+                    }}
                 />
                 <style>{`
                     .fc .fc-button, .fc .fc-button-primary {
@@ -339,7 +347,11 @@ const Calendar = ({
                         background: #FAF7F2;
                     }
                     .fc .fc-day-today {
-                        background: #FFF6ED !important;
+                        background: #FFD580 !important;
+                        border: 2.5px solid #FF9800 !important;
+                        box-shadow: 0 0 0 2px #FF980033 !important;
+                        border-radius: 8px !important;
+                        z-index: 2;
                     }
                 `}</style>
             </div>
